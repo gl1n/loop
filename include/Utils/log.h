@@ -79,7 +79,6 @@ public:
     *_event << std::forward<T>(data);
     return *this;
   }
-  LogEventCapture &operator<<(std::ostream &(*f)(std::ostream &));
 
 private:
   std::shared_ptr<LogEvent> _event; //生成的event
@@ -131,6 +130,7 @@ private:
 } // namespace loop
 
 /*********************宏定义***********************/
+//无名对象的生命周期之后一个语句，不会等到scope结束
 #define LOG(level)                                                             \
   loop::LogEventCapture(loop::Logger::Instance(), level, __FILE__,             \
                         __FUNCTION__, __LINE__)

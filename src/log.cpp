@@ -57,17 +57,7 @@ LogEventCapture::LogEventCapture(Logger &logger, LogLevel level,
                                  int line)
     : _logger(logger), _event(new LogEvent(level, file, function, line)) {}
 
-LogEventCapture::~LogEventCapture() { *this << std::endl; }
-
-LogEventCapture &
-LogEventCapture::operator<<(std::ostream &(*f)(std::ostream &)) {
-  //如果用户代码显式调用endl，则会两次调用本函数，所以第一次进入此函数需要reset掉_event，防止第二次进入时再次write
-  if (_event) {
-    _logger.write_event(_event);
-    _event.reset(); // 释放掉_event
-  }
-  return *this;
-}
+LogEventCapture::~LogEventCapture() { _logger.write_event(_event); }
 
 /*******************AsyncWriter*******************/
 AsyncWriter::AsyncWriter() : _exit(false) {
