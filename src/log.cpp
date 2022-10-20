@@ -78,7 +78,7 @@ AsyncWriter::~AsyncWriter() {
   _exit = true;
   _sem.post(); //让run线程的_sem.wait()通过，从而跳出循环
   _thread->join();
-  flush_all();
+  flush_all(); //处理run线程结束之后，this正式析构之前的Events
 }
 void AsyncWriter::push_event(LogEvent::Ptr event, Logger *logger) {
   {
