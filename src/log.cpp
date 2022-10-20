@@ -19,6 +19,8 @@ Logger &Logger::Instance() {
   return instance;
 }
 
+Logger::~Logger() { InfoL << "Program ends."; }
+
 //写到_channels中
 void Logger::write_event(LogEvent::Ptr event) {
   if (_writer) { //异步
@@ -88,7 +90,7 @@ void AsyncWriter::push_event(LogEvent::Ptr event, Logger *logger) {
 void AsyncWriter::run() {
   while (!_exit) {
     _sem.wait();
-    flush_all(); //这里会占用_mtx很长时间
+    flush_all();
   }
 }
 

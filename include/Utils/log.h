@@ -29,6 +29,8 @@ public:
   static Logger &Instance();
   Logger(const Logger &) = delete;            //禁用复制构造函数
   Logger &operator=(const Logger &) = delete; //禁用赋值函数
+  //析构函数
+  ~Logger();
 
   //写event
   void write_event(std::shared_ptr<LogEvent> event);
@@ -44,8 +46,9 @@ private:
   Logger() {} //默认同步
 
 private:
-  std::shared_ptr<AsyncWriter> _writer;
   std::list<std::shared_ptr<LogChannel>> _channels; //输出目的地
+  std::shared_ptr<AsyncWriter>
+      _writer; //注意：_writer必须在_channels析构之前析构。可以让_writer后于_channels声明，也可以在析构函数中显式地调用reset方法
 };
 
 class LogEvent : public std::ostringstream {
