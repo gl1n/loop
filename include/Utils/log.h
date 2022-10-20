@@ -47,8 +47,9 @@ private:
 
 private:
   std::list<std::shared_ptr<LogChannel>> _channels; //输出目的地
-  std::shared_ptr<AsyncWriter>
-      _writer; //注意：_writer必须在_channels析构之前析构。可以让_writer后于_channels声明，也可以在析构函数中显式地调用reset方法
+  std::shared_ptr<AsyncWriter> _writer;
+  //注意：_writer必须在_channels析构之前析构。
+  //可以让_writer后于_channels声明，也可以在析构函数中显式地调用reset方法
 };
 
 class LogEvent : public std::ostringstream {
