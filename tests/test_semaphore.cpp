@@ -1,5 +1,5 @@
+#include <Thread/semaphore.h>
 #include <Utils/log.h>
-#include <Utils/semaphore.h>
 #include <chrono>
 #include <mutex>
 #include <queue>

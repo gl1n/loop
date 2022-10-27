@@ -1,7 +1,7 @@
 #pragma once
 
+#include <Thread/semaphore.h>
 #include <Utils/list.h>
-#include <Utils/semaphore.h>
 #include <cstddef>
 #include <fstream>
 #include <iostream>
