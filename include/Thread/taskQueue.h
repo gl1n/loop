@@ -6,7 +6,8 @@
 #include <mutex>
 #include <utility>
 
-namespace identifier {
+namespace loop {
+//这个类用于同步地管理任务队列
 template <typename T> class TaskQueue {
 public:
   // 将任务加入队尾
@@ -51,4 +52,4 @@ private:
   loop::List<T> _queue;
   loop::Semaphore _sem;
 };
-} // namespace identifier
+} // namespace loop
