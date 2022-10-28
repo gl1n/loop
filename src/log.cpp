@@ -45,7 +45,7 @@ void Logger::set_async() { _writer = std::make_shared<AsyncWriter>(); }
 /*******************LogEvent*******************/
 LogEvent::LogEvent(LogLevel level, const char *file, const char *function,
                    int line)
-    : _level(level), _function(function), _file(strrchr(file, '/') + 1),
+    : _level(level), _file(strrchr(file, '/') + 1), _function(function),
       _line(line) {
   gettimeofday(&_tv, nullptr); //获取时间，精确到毫秒
   _thread_id = std::this_thread::get_id();
@@ -57,7 +57,19 @@ LogEventCapture::LogEventCapture(Logger &logger, LogLevel level,
                                  int line)
     : _logger(logger), _event(new LogEvent(level, file, function, line)) {}
 
-LogEventCapture::~LogEventCapture() { _logger.write_event(_event); }
+LogEventCapture::LogEventCapture(LogEventCapture &&other)
+    : _logger(other._logger), _event(other._event) {
+  other._event.reset();
+}
+
+LogEventCapture::~LogEventCapture() {
+  // LogEventCapture对象里面可能会存放空的_event
+  if (_event) {
+    _logger.write_event(_event);
+  }
+}
+
+void LogEventCapture::clear() { _event.reset(); }
 
 /*******************AsyncWriter*******************/
 AsyncWriter::AsyncWriter() : _exit(false) {
@@ -131,7 +143,6 @@ void LogChannel::format(LogEvent::Ptr event, std::ostream &stream,
 #undef CASE
 
   //文件信息
-  auto idx = event->_file.rfind('/');
   stream << event->_file;
   stream << " ";
   stream << event->_function;

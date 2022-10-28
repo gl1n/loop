@@ -72,6 +72,9 @@ public:
   LogEventCapture(Logger &logger, LogLevel level, const char *file,
                   const char *function, int line);
 
+  //移动拷贝构造函数
+  LogEventCapture(LogEventCapture &&other);
+
   ~LogEventCapture();
 
   //模板不能放在cpp里
@@ -80,9 +83,11 @@ public:
     return *this;
   }
 
+  void clear();
+
 private:
-  std::shared_ptr<LogEvent> _event; //生成的event
-  Logger &_logger;                  //目标logger
+  Logger &_logger;      //目标logger
+  LogEvent::Ptr _event; //生成的event
 };
 
 class AsyncWriter {
