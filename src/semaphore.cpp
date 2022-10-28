@@ -1,4 +1,4 @@
-#include <Utils/semaphore.h>
+#include <Thread/semaphore.h>
 #include <cstddef>
 
 namespace loop {
