@@ -11,8 +11,9 @@ public:
                                                LogLevel::Warn, __FILE__, "",
                                                __LINE__),
          bool print_log = false)
-      : _expected_time(expected_time), _lec(std::move(lec)) {
-    if (!print_log) {
+      : _expected_time(expected_time), _lec(std::move(lec)),
+        _print_log(print_log) {
+    if (!_print_log) {
       _lec.clear();
     }
     _create_time = timeSinceEpochMillisecs();
@@ -20,7 +21,7 @@ public:
   }
 
   ~Ticker() {
-    if (sinceCreated() > _expected_time) {
+    if (sinceCreated() > _expected_time && _print_log) {
       _lec << "take time: " << sinceCreated()
            << "ms, thread might be overloaded"; //超出预计时间
     } else {
@@ -40,5 +41,6 @@ private:
   u_int64_t _begin_time;
   u_int64_t _create_time;
   LogEventCapture _lec;
+  bool _print_log;
 };
 } // namespace loop
