@@ -25,6 +25,9 @@ class AsyncWriter;
 enum class LogLevel { Trace, Debug, Info, Warn, Error };
 class Logger {
 public:
+  using Ptr = std::shared_ptr<Logger>;
+
+public:
   //单例
   static Logger &Instance();
   Logger(const Logger &) = delete;            //禁用复制构造函数
