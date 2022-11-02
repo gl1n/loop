@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <stdexcept>
 #include <thread>
@@ -63,6 +64,8 @@ public:
     }
     _threads.clear();
   }
+
+  std::size_t size() { return _threads.size(); }
 
 private:
   using THREAD_ID = std::thread::id;
