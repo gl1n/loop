@@ -23,7 +23,7 @@ class LogChannel;
 class AsyncWriter;
 
 enum class LogLevel { Trace, Debug, Info, Warn, Error };
-class Logger {
+class Logger : std::enable_shared_from_this<Logger> {
 public:
   using Ptr = std::shared_ptr<Logger>;
 
