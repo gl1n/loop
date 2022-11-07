@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Thread/TaskExecutor.h"
+#include "Thread/semaphore.h"
 #include "Thread/taskQueue.h"
 #include "Thread/threadgroup.h"
 #include "Utils/log.h"
@@ -41,26 +42,48 @@ public:
     wait();
   }
 
-  virtual Task::Ptr async(TaskIn task, bool may_sync = true) override {
+  bool async(Task &&task, bool may_sync = true) override {
     //如果允许同步执行而且当前线程就在线程池里，就直接执行任务
     if (may_sync && _thread_group.is_this_thread_in()) {
       task();
-      return nullptr;
+    } else {
+      _queue.push_task_back(std::move(task));
     }
-    auto ret = std::make_shared<Task>(task);
-    _queue.push_task_back(ret);
-    return ret;
+    return true;
   }
 
-  virtual Task::Ptr async_first(TaskIn task, bool may_sync = true) override {
+  bool async_first(Task &&task, bool may_sync = true) override {
     if (may_sync && _thread_group.is_this_thread_in()) {
       task();
-      return nullptr;
+    } else {
+      _queue.push_task_first(std::move(task));
     }
 
-    auto ret = std::make_shared<Task>(task);
-    _queue.push_task_first(ret);
-    return ret;
+    return true;
+  }
+
+  bool sync(Task &&task) override {
+    Semaphore sem;
+    bool flag = async([&]() {
+      task();
+      sem.post();
+    });
+    if (flag) {
+      sem.wait();
+    }
+    return flag;
+  }
+
+  bool sync_first(Task &&task) override {
+    Semaphore sem;
+    bool flag = async_first([&]() {
+      task();
+      sem.post();
+    });
+    if (flag) {
+      sem.wait();
+    }
+    return flag;
   }
 
   //设置线程优先级，默认设置本线程
@@ -101,8 +124,8 @@ public:
 private:
   //每个线程的职责是从_queue中取出任务并执行
   void run() {
-    setPriority(_priority);
-    Task::Ptr task;
+    ThreadPool::setPriority(_priority);
+    TaskExecutor::Task task;
 
     while (true) {
       recordSleep();
@@ -113,7 +136,7 @@ private:
       recordWakeUp();
       //执行task
       try {
-        (*task)();
+        task();
         task = nullptr;
       } catch (std::exception &ex) {
         ErrorL << "ThreadPool执行任务捕获到异常:" << ex.what();
@@ -129,7 +152,7 @@ private:
 
 private:
   std::size_t _thread_num;
-  TaskQueue<Task::Ptr> _queue;
+  TaskQueue<TaskExecutor::Task> _queue;
   ThreadGroup _thread_group;
   Priority _priority;
   // Logger::Ptr _logger;

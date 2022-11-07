@@ -78,34 +78,6 @@ int ThreadLoadCounter::load() {
   return (int)(totalRunTime * 100 / totalTime);
 }
 
-/**********************TaskExecutorInterface***********************/
-
-Task::Ptr TaskExecutorInterface::async_first(TaskIn task, bool may_sync) {
-  return async(std::move(task), may_sync);
-}
-
-void TaskExecutorInterface::sync(const TaskIn &task) {
-  Semaphore sem;
-  auto ret = async([&]() {
-    onceToken token(nullptr, [&]() { sem.post(); });
-    task();
-  });
-  if (ret && *ret) {
-    sem.wait();
-  }
-}
-
-void TaskExecutorInterface::sync_first(const TaskIn &task) {
-  Semaphore sem;
-  auto ret = async_first([&]() {
-    onceToken token(nullptr, [&]() { sem.post(); });
-    task();
-  });
-  if (ret && *ret) {
-    sem.wait();
-  }
-};
-
 /**********************TaskExecutor***********************/
 TaskExecutor::TaskExecutor(u_int64_t max_size, u_int64_t max_usec)
     : ThreadLoadCounter(max_size, max_usec) {}
