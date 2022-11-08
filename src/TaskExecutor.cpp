@@ -1,9 +1,11 @@
 #include "Thread/TaskExecutor.h"
 #include "Thread/semaphore.h"
-#include "Utils/onceToken.h"
+#include "Utils/TimeTicker.h"
 #include "Utils/util.h"
+#include <memory>
 #include <mutex>
 #include <sys/types.h>
+#include <vector>
 
 namespace loop {
 
@@ -81,5 +83,69 @@ int ThreadLoadCounter::load() {
 /**********************TaskExecutor***********************/
 TaskExecutor::TaskExecutor(u_int64_t max_size, u_int64_t max_usec)
     : ThreadLoadCounter(max_size, max_usec) {}
+
+TaskExecutor::Ptr TaskExecutorGetterImp::getExecutor() {
+  //从上一次取到的执行器的位置开始找
+  auto executor_pos = _last_lightest_executor_pos;
+  if (executor_pos >= _executors.size()) {
+    executor_pos = 0;
+  }
+
+  TaskExecutor::Ptr min_load_executor = _executors[executor_pos];
+  auto min_load = min_load_executor->load();
+
+  for (int i = 0; i < _executors.size(); i++, executor_pos++) {
+    //相当于取模
+    if (executor_pos >= _executors.size()) {
+      executor_pos = 0;
+    }
+
+    auto executor = _executors[executor_pos];
+    auto load = executor->load();
+
+    if (load < min_load) {
+      min_load_executor = executor;
+      min_load = load;
+    }
+
+    //负载不可能比0小，所以找到负载为0的执行器直接退出
+    if (min_load == 0) {
+      break;
+    }
+  }
+  _last_lightest_executor_pos = executor_pos;
+  return min_load_executor;
+}
+
+std::vector<int> TaskExecutorGetterImp::getExecutorLoad() {
+  std::vector<int> ret;
+  for (auto const &exec : _executors) {
+    ret.push_back(exec->load());
+  }
+  return ret;
+}
+
+void TaskExecutorGetterImp::getExecutorDelay(
+    const std::function<void(const std::vector<int> &)> &callback) {
+  int totalCount = _executors.size();
+  std::shared_ptr<std::atomic_int> completed =
+      std::make_shared<std::atomic_int>(0);
+  std::shared_ptr<std::vector<int>> delayVec =
+      std::make_shared<std::vector<int>>(totalCount);
+  int index = 0;
+  for (auto &exec : _executors) {
+    std::shared_ptr<Ticker> ticker = std::make_shared<Ticker>();
+    exec->async(
+        [delayVec, index, ticker, completed, totalCount, &callback]() {
+          (*delayVec)[index] = ticker->sinceLast();
+          (*completed)++;
+          if ((*completed) == totalCount) {
+            callback(*delayVec);
+          }
+        },
+        false); //不能直接执行，必须打入队列
+    index++;
+  }
+}
 
 } // namespace loop

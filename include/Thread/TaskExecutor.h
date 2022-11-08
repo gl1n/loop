@@ -7,8 +7,10 @@
 #include <memory>
 #include <mutex>
 #include <sys/types.h>
+#include <thread>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace loop {
 /*
@@ -60,70 +62,9 @@ private:
   List<TimeRecord> _time_list;
 };
 
-// class TaskCancelable : public uncopyable {
-// public:
-//   TaskCancelable() = default;
-//   virtual ~TaskCancelable() = default;
-//   virtual void cancel() = 0;
-// };
-
-// //必须写成先声明再特化，这样才能推导出R和ArgTypes
-// template <typename R, typename... ArgTypes> class TaskCancelableImp;
-
-// template <typename R, typename... ArgTypes>
-// class TaskCancelableImp<R(ArgTypes...)> : public TaskCancelable {
-// public:
-//   using Ptr = std::shared_ptr<TaskCancelableImp>;
-//   using func_type = std::function<R(ArgTypes...)>;
-
-//   ~TaskCancelableImp() = default;
-
-//   template <typename FUNC> TaskCancelableImp(FUNC &&task) {
-//     _strongTask = std::make_shared<func_type>(std::forward<FUNC>(task));
-//     _weakTask = _strongTask;
-//   }
-
-//   void cancel() override {
-//     _strongTask = nullptr; //等价于reset()
-//   }
-
-//   operator bool() { return _strongTask && *_strongTask; }
-
-//   void operator=(std::nullptr_t) { _strongTask = nullptr; }
-
-//   R operator()(ArgTypes... args) const {
-//     auto strongTask = _weakTask.lock();
-//     if (strongTask && *strongTask) {
-//       return (*strongTask)(std::forward<ArgTypes>(args)...);
-//     }
-//     return defaultValue<R>();
-//   }
-
-//   //如果T是void，不返回任何值
-//   template <typename T>
-//   static typename std::enable_if<std::is_void<T>::value, void>::type
-//   defaultValue() {}
-
-//   template <typename T>
-//   static typename std::enable_if<std::is_pointer<T>::value, T>::type
-//   defaultValue() {
-//     return nullptr;
-//   }
-
-//   template <typename T>
-//   static typename std::enable_if<std::is_integral<T>::value, T>::type
-//   defaultValue() {
-//     return 0;
-//   }
-
-// protected:
-//   std::weak_ptr<func_type> _weakTask;
-//   std::shared_ptr<func_type> _strongTask;
-// };
-
-// using TaskIn = std::function<void()>;
-// using Task = TaskCancelableImp<void()>;
-
+/**
+ * 任务执行器
+ */
 class TaskExecutor : public ThreadLoadCounter {
 public:
   using Task = std::function<void()>;
@@ -163,20 +104,61 @@ public:
   virtual bool sync_first(Task &&task) { return sync(std::move(task)); }
 };
 
-/**
- * 任务执行器
- */
-// class TaskExecutor : public ThreadLoadCounter, public TaskExecutorInterface {
-// public:
-//   using Ptr = std::shared_ptr<TaskExecutor>;
+class TaskExecutorGetter {
+public:
+  using Ptr = std::shared_ptr<TaskExecutorGetter>;
+  virtual ~TaskExecutorGetter() = default;
 
-//   /**
-//    * 构造函数
-//    * @param max_size cpu负载统计样本数
-//    * @param max_usec cpu负载统计时间窗口大小
-//    */
-//   TaskExecutor(u_int64_t max_size = 32, u_int64_t max_usec = 2 * 1000 *
-//   1000); ~TaskExecutor() = default;
-// };
+  /**
+   * 获取任务执行器
+   * @return 任务执行器
+   */
+  virtual TaskExecutor::Ptr getExecutor() = 0;
+};
+
+class TaskExecutorGetterImp : public TaskExecutorGetter {
+public:
+  TaskExecutorGetterImp() = default;
+  ~TaskExecutorGetterImp() = default;
+
+  /**
+   * 根据线程负载情况，获取最空闲的任务执行器
+   * @return 任务执行器
+   */
+  TaskExecutor::Ptr getExecutor() override;
+
+  /**
+   * 获取所有线程的负载率
+   * @return 所有线程的负载率
+   */
+  std::vector<int> getExecutorLoad();
+
+  /**
+   * 测算完成当前所有执行器内的任务所需时间
+   * @param callback 完成测算之后进行的回调
+   */
+  void getExecutorDelay(
+      const std::function<void(const std::vector<int> &)> &callback);
+
+  template <typename FUNC> void for_each(FUNC &&func) {
+    for (auto &ex : _executors) {
+      func(ex);
+    }
+  }
+
+protected:
+  template <typename FUNC>
+  //统一创建执行器组
+  void createExecutor(FUNC &&func,
+                      int executor_num = std::thread::hardware_concurrency()) {
+    for (int i = 0; i < executor_num; i++) {
+      _executors.emplace_back(func());
+    }
+  }
+
+private:
+  std::vector<TaskExecutor::Ptr> _executors;
+  int _last_lightest_executor_pos = 0;
+};
 
 } // namespace loop
