@@ -32,7 +32,6 @@ public:
     if (auto_run) {
       start();
     }
-    // _logger = Logger::Instance().shared_from_this();
   }
 
   ~ThreadPool() {
@@ -155,6 +154,7 @@ private:
   TaskQueue<TaskExecutor::Task> _queue;
   ThreadGroup _thread_group;
   Priority _priority;
+  //保持日志器可用
   // Logger::Ptr _logger;
 };
 
