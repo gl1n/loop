@@ -2,6 +2,7 @@
 #include "Thread/semaphore.h"
 #include "Utils/TimeTicker.h"
 #include "Utils/util.h"
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <sys/types.h>

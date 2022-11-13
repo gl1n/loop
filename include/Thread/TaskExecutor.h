@@ -152,11 +152,12 @@ protected:
   void createExecutor(FUNC &&func,
                       int executor_num = std::thread::hardware_concurrency()) {
     for (int i = 0; i < executor_num; i++) {
-      _executors.emplace_back(func());
+      _executors.emplace_back(
+          func()); //由func创建，然后将func的返回值保存到_executors中
     }
   }
 
-private:
+protected:
   std::vector<TaskExecutor::Ptr> _executors;
   int _last_lightest_executor_pos = 0;
 };

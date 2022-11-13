@@ -11,7 +11,7 @@ namespace loop {
 PipeWrap::PipeWrap() {
   if (pipe(_pipe_fd) == -1) {
     std::string err_msg = "create posix pipe failed:";
-    throw std::runtime_error(err_msg + strerror(errno));
+    throw std::runtime_error(err_msg + std::strerror(errno));
   }
   SockUtil::setNoBlocked(_pipe_fd[0], true);
   SockUtil::setNoBlocked(_pipe_fd[1], false);
@@ -32,6 +32,7 @@ int PipeWrap::write(const void *buf, int n) {
 
 int PipeWrap::read(void *buf, int n) {
   int ret;
+  //这个过程是非堵塞的
   do {
     ret = ::read(_pipe_fd[0], buf, n);
   } while (ret == -1 && errno == EINTR);
