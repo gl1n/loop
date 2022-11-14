@@ -331,7 +331,10 @@ u_int64_t EventPoller::flushDelayTask(u_int64_t now) {
     try {
       auto next_delay =
           (*(it->second))(); //有些任务需要重复执行，任务的返回值是执行的延迟
-      task_updated.emplace(now + next_delay, std::move(it->second)); //重新入队
+      if (next_delay) {
+        task_updated.emplace(now + next_delay,
+                             std::move(it->second)); //重新入队
+      }
     } catch (std::exception &ex) {
       ErrorL << "EventPoller执行延时任务捕获到异常:" << ex.what();
     }
